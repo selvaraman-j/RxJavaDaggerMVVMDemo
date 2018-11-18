@@ -1,21 +1,22 @@
 package demo.selva.com.rxjavadaggermvvmdemo.viewmodel
 
 import demo.selva.com.rxjavadaggermvvmdemo.Repository.CurrencyAPIService
-import demo.selva.com.rxjavadaggermvvmdemo.model.Currency
+import demo.selva.com.rxjavadaggermvvmdemo.viewmodel.helper.DateUtil
 import io.reactivex.Single
-import java.text.SimpleDateFormat
-import java.util.*
 import javax.inject.Inject
 
-class CurrencyConversionViewModel @Inject constructor(private val currencyAPIService: CurrencyAPIService) {
+class CurrencyConversionViewModel @Inject constructor(private val currencyAPIService: CurrencyAPIService
+                                                      , private val dateUtil: DateUtil) {
 
-    fun getCurrentCurrencyRate(): Single<Currency> {
+    fun getCurrentCurrencyRate(): Single<Double> {
         return currencyAPIService.getCurrentCurrencyRate()
+                .map {
+                    it.gbpinr ?: 0.0
+                }
     }
 
     fun getLastUpdate(): String {
-        val formatter = SimpleDateFormat("dd-MMM-yyyy hh:mm:ss", Locale.getDefault())
-        return formatter.format(Date())
+        return dateUtil.getLastUpdate()
     }
 
     fun convertGbpToInr(currentIndianRupee: Double, gbp: Double): Double {

@@ -55,8 +55,11 @@ class MainActivity : AppCompatActivity() {
 
         })
 
-        fetchCurrentRate()
+    }
 
+    override fun onResume() {
+        super.onResume()
+        fetchCurrentRate()
     }
 
     private fun fetchCurrentRate() {
@@ -64,17 +67,22 @@ class MainActivity : AppCompatActivity() {
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe({
-                    currentPrice = if (it?.gbpinr == null) 0.0 else it.gbpinr!!
-                    indianRupee.setText(currencyConversionViewModel.convertGbpToInr(currentPrice, defaultGbp).toString())
-                    poundSterling.setText(defaultGbp.toString())
-                    lastUpdate.text = getString(R.string.last_update, currencyConversionViewModel.getLastUpdate())
+                    currentPrice = it
+                    updateViews()
                 }, { _ -> Toast.makeText(this@MainActivity, "Please try again later!", Toast.LENGTH_SHORT).show() })
 
         mCompositeDisposable.add(disposable)
+    }
+
+    private fun updateViews() {
+        indianRupee.setText(currencyConversionViewModel.convertGbpToInr(currentPrice, defaultGbp).toString())
+        poundSterling.setText(defaultGbp.toString())
+        lastUpdate.text = getString(R.string.last_update, currencyConversionViewModel.getLastUpdate())
     }
 
     override fun onDestroy() {
         super.onDestroy()
         mCompositeDisposable.clear()
     }
+
 }
