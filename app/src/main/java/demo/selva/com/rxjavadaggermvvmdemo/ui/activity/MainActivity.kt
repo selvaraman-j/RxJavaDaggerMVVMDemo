@@ -2,17 +2,17 @@ package demo.selva.com.rxjavadaggermvvmdemo.ui.activity
 
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
-import android.text.Editable
-import android.text.TextWatcher
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
+import com.jakewharton.rxbinding.widget.RxTextView
 import demo.selva.com.rxjavadaggermvvmdemo.DemoApplication
 import demo.selva.com.rxjavadaggermvvmdemo.R
 import demo.selva.com.rxjavadaggermvvmdemo.viewmodel.CurrencyConversionViewModel
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
+import rx.subscriptions.CompositeSubscription
 import javax.inject.Inject
 
 class MainActivity : AppCompatActivity() {
@@ -28,6 +28,7 @@ class MainActivity : AppCompatActivity() {
     lateinit var currencyConversionViewModel: CurrencyConversionViewModel
 
     private val mCompositeDisposable = CompositeDisposable()
+    private val mCompositeSubscription = CompositeSubscription()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -39,37 +40,44 @@ class MainActivity : AppCompatActivity() {
         poundSterling = findViewById(R.id.pound_edt)
         lastUpdate = findViewById(R.id.last_update_text)
 
-        //Todo rxjava implementation
-        poundSterling.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(p0: CharSequence?, p1: Int, p2: Int, p3: Int) {
-            }
+    }
 
-            override fun onTextChanged(p0: CharSequence?, p1: Int, p2: Int, p3: Int) {
-            }
-
-            override fun afterTextChanged(text: Editable) {
-                if (text.isNotEmpty() && currentPrice > 0) {
-                    indianRupee.setText(currencyConversionViewModel.convertGbpToInr(currentPrice, text.toString().toDouble()).toString())
-                }
-            }
-
-        })
-
+    override fun onPause() {
+        super.onPause()
+        mCompositeSubscription.clear()
+        mCompositeDisposable.clear()
     }
 
     override fun onResume() {
         super.onResume()
+        bindTextChanges()
         fetchCurrentRate()
+    }
+
+    private fun bindTextChanges() {
+        val subscription = RxTextView.textChanges(poundSterling)
+                .filter {
+                    it.isNotEmpty() && currentPrice > 0
+                }
+                .map {
+                    currencyConversionViewModel.convertGbpToInr(currentPrice, it.toString().toDouble()).toString()
+                }
+                .subscribe {
+                    indianRupee.setText(it)
+                }
+        mCompositeSubscription.add(subscription)
     }
 
     private fun fetchCurrentRate() {
         val disposable = currencyConversionViewModel.getCurrentCurrencyRate()
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe({
+                .map {
                     currentPrice = it
+                }
+                .subscribe({
                     updateViews()
-                }, { _ -> Toast.makeText(this@MainActivity, "Please try again later!", Toast.LENGTH_SHORT).show() })
+                }, { Toast.makeText(this@MainActivity, "Please try again later!", Toast.LENGTH_SHORT).show() })
 
         mCompositeDisposable.add(disposable)
     }
@@ -79,10 +87,4 @@ class MainActivity : AppCompatActivity() {
         poundSterling.setText(defaultGbp.toString())
         lastUpdate.text = getString(R.string.last_update, currencyConversionViewModel.getLastUpdate())
     }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        mCompositeDisposable.clear()
-    }
-
 }
