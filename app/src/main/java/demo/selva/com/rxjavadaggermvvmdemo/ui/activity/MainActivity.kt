@@ -60,7 +60,8 @@ class MainActivity : AppCompatActivity() {
                     it.isNotEmpty() && currentPrice > 0
                 }
                 .map {
-                    currencyConversionViewModel.convertGbpToInr(currentPrice, it.toString().toDouble()).toString()
+                    defaultGbp = it.toString().toDouble()
+                    currencyConversionViewModel.convertGbpToInr(currentPrice, defaultGbp).toString()
                 }
                 .subscribe {
                     indianRupee.setText(it)
